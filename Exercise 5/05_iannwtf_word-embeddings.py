@@ -1,13 +1,14 @@
 # coding: utf-8
 
 # # 3 Data preparation
-# 
+#
 # You can use the helper class (05 book-helper.py) to read-in the data. The script creates a tokenized version of the book once you create an instance of it. Since the tf.nn.embedding lookup function expects word ids, we need to map the words in the tokenized version of the book to ids. The create dictionaries method does exactly this. You need to pass the size of your vocabulary to the method. The method will then select the most common words and creates a unique id each for them, all other words are mapped to id 0, which is equivalent to ”unknown”.
 
 # In[8]:
 
 
 import numpy as np
+import tensorflow as tf
 from collections import Counter
 from nltk.tokenize import RegexpTokenizer
 
@@ -69,20 +70,44 @@ class Book:
                 yield words, contexts
                 counter = 0
 
+def layer(input, input_size, output_size, layerName):
+    with tf.variable_scope(layerName)
+        weights = tf.Variable(tf.truncated_normal(dtype = tf.float32, shape = [input_size, output_size], stddev = 0.1))
+        activation = tf.matmul(x,weights)
+        return activation
 
-# # 4 Test the mapping
-# 
-# Test the words2ids and ids2words methods by ﬁrst converting a list of words into ids and then back to words.
 
 # In[18]:
 
+##### hyperparameters #####
+number_words = 10000
+embedding_size = 128
+##### dataflowgraph #####
+#inputs and expected outputs
+x = tf.placeholder(dtype = tf.bool, shape = [None, number_words])
+targets = tf.placeholder(dtype = tf.bool, shape = [None, number_words])
 
+### compute first layer
+first_layer = layer(x, number_words, embedding_size, 'l_1')
+
+### compute the output layer
+out_layer = layer(first_layer, embedding_size, number_words, 'out_layer')
+prediction = tf.nn.softmax(out_layer)
+
+
+#now run the network:
+with tf.Session() as session:
+
+# # 4 Test the mapping
+#
+# Test the words2ids and ids2words methods by ﬁrst converting a list of words into ids and then back to words.
+
+#### other stuff #####
 bible = Book("pg10.txt")
 
 bible.create_dictionaries(1000)
 
 list1 = ["one", "two", "three", "four", "five", "god", "christ"]
-
 ids = bible.words2ids(list1)
-
+print(ids)
 print(bible.ids2words(ids))
