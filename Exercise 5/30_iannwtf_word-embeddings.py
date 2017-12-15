@@ -70,33 +70,6 @@ class Book:
                 yield words, contexts
                 counter = 0
 
-def layer(input, input_size, output_size, layerName):
-    with tf.variable_scope(layerName)
-        weights = tf.Variable(tf.truncated_normal(dtype = tf.float32, shape = [input_size, output_size], stddev = 0.1))
-        activation = tf.matmul(x,weights)
-        return activation
-
-
-# In[18]:
-
-##### hyperparameters #####
-number_words = 10000
-embedding_size = 128
-##### dataflowgraph #####
-#inputs and expected outputs
-x = tf.placeholder(dtype = tf.bool, shape = [None, number_words])
-targets = tf.placeholder(dtype = tf.bool, shape = [None, number_words])
-
-### compute first layer
-first_layer = layer(x, number_words, embedding_size, 'l_1')
-
-### compute the output layer
-out_layer = layer(first_layer, embedding_size, number_words, 'out_layer')
-prediction = tf.nn.softmax(out_layer)
-
-
-#now run the network:
-with tf.Session() as session:
 
 # # 4 Test the mapping
 #
@@ -111,3 +84,63 @@ list1 = ["one", "two", "three", "four", "five", "god", "christ"]
 ids = bible.words2ids(list1)
 print(ids)
 print(bible.ids2words(ids))
+
+# # 5 Embedding
+# 
+# 
+def layer(input, input_size, output_size, layerName):
+    with tf.variable_scope(layerName):
+        weights = tf.Variable(tf.truncated_normal(dtype = tf.float32, shape = [input_size,output_size], stddev = 0.1))
+        
+        activation = tf.matmul(input,weights)
+        return activation
+
+
+##### hyperparameters #####
+number_words = 10000
+embedding_size = 128
+
+batchSize = 128
+epochs = 5
+stepSize = 1
+skipWindows = 2
+noiseSamples = 64
+
+##### dataflowgraph #####
+#inputs and expected outputs
+x = tf.placeholder(dtype = tf.float32, shape = [None, number_words])
+targets = tf.placeholder(dtype = tf.float32, shape = [None, number_words])
+
+### compute first layer
+first_layer = layer(x, number_words, embedding_size, 'l_1')
+
+### compute the output layer
+out_layer = layer(first_layer, embedding_size, number_words, 'out_layer')
+prediction = tf.nn.softmax(out_layer)
+
+
+# embedding
+with tf.variable_scope("embedding"):
+    # Create a word-embedding of size vocabulary size x embedding size
+    initializer = tf.random_uniform_initializer(-1.0, 1.0)
+    embeddings = tf.get_variable("embedding", [number_words, embedding_size], initializer = initializer)
+    # Given a tensor of word ids, retrieve the respective embedding
+    embed = tf.nn.embedding_lookup(embeddings, tf.cast(x, tf.int32))
+
+with tf.variable_scope("nce-loss"):
+    # Create weights and biases for NCE
+    initializer = tf.truncated_normal_initializer(stddev = 1.0 / np.sqrt(embedding_size))
+    nce_weights = tf.get_variable("weights", [number_words, embedding_size], tf.float32, initializer)
+    nce_biases = tf.get_variable("biases", [number_words], initializer = tf.zeros_initializer())
+    loss = tf.reduce_mean(tf.nn.nce_loss(weights=nce_weights, biases=nce_biases, labels=targets, inputs=embed, num_sampled=3000, num_classes=number_words))
+
+with tf.variable_scope("optimizer"):
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    training_step = optimizer.minimize(nce_loss)
+
+#now run the network:
+with tf.Session() as session:
+    for inputs, labels in get_training_batch(self, batch_size, skip_window):
+        feed_dict = {x: inputs, targets: labels}
+        _, current_loss = session.run([optimizer, loss], feed_dict=feed_dict)
+
