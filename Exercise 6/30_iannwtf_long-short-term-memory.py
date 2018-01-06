@@ -23,8 +23,14 @@ class IMDB:
         self._training_labels = np.delete(self._training_labels, random_indices)
 
         joined_written_ratings = [word for text in self._training_data for word in text]
+
         print("Unique words: " + str(len(Counter(joined_written_ratings))))
         print("Mean length: " + str(np.mean([len(text) for text in self._training_data])))
+
+        print(self._training_data.shape)
+        print(len(self._training_data[0]))
+        print(len(self._training_data[1]))
+        print(len(self._training_data[2]))
 
     def _load_data(self, data_set_type):
         data = []
@@ -41,7 +47,7 @@ class IMDB:
                 labels.append(label)
 
                 # Read written rating from file
-                with open(os.path.join(directory_str, filename)) as fd:
+                with open(os.path.join(directory_str, filename), encoding="utf-8") as fd:
                     written_rating = fd.read()
                     written_rating = written_rating.lower()
                     tokenizer = RegexpTokenizer(r'\w+')
@@ -124,4 +130,23 @@ class IMDB:
         test_samples_n = self._test_labels.shape[0]
         return training_samples_n, validation_samples_n, test_samples_n
 
+# import data
+imdb = IMDB(os.getcwd())
 
+# hyperparameters
+
+embedding_size = 64
+vocabulary_size = 20000
+cutoff_length = 300
+subsequence_length = 100
+batch_size = 250
+epochs = 2
+learning_rate = 0.03
+dropout_rate = 0.85
+
+# create word ids
+imdb.create_dictionaries(vocabulary_size, cutoff_length)
+
+# tests
+print("Mean length: " + str(np.mean([len(text) for text in imdb._training_data])))
+print("Shape: ", imdb._training_data.shape)
