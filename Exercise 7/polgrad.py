@@ -2,6 +2,20 @@ import gym
 import numpy as np
 import tensorflow as  tf
 
+def compute_gradients_and_rewards(gradients, rewards, discount_factor):
+    length = len(rewards)
+    rewards = np.asarray(rewards)
+    last_reward = 0
+    for i in np.arange(length):
+        index_from_end = (i+1)*(-1)
+        rewards[index_from_end] = (discount_factor * last_reward) + rewards[index_from_end]
+        last_reward = rewards[index_from_end]
+    rewards -= np.mean(rewards)
+    rewards = rewards / np.std(rewards)
+    for i in np.arange(length):
+        for gradient_index in np.arange(len(gradients[i])):
+            gradients[i][gradient_index] = gradients[i][gradient_index] / rewards[i]
+    return gradients, rewards
 ####parameters####
 episodes = 100
 episode_length = 200
@@ -59,9 +73,11 @@ with tf.Session() as session:
             observation, reward, done, info = env.step(selected_action)
             #keep track of rewards and gradients
             gradientList.append(extracted_gradient)
-            print('reward:')
-            print(reward)
+            rewardList.append(reward)
             if done:
                 break
-
             env.render()
+        discounted_gradients, discounted_rewards = compute_gradients_and_rewards(gradientList, rewardList, discount_factor)
+        for item in discounted_gradients:
+            print(item)
+            _ = session.run(training_step, feed_dict = {gradient_placeholders: item})
