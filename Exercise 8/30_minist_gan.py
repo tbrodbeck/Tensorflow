@@ -9,11 +9,11 @@ import tensorflow as tf
 
 
 class MNIST_GAN():
-    def __init__(self, directory):
+    def __init__(self, directory=""):
         self._directory = directory
 
-        self._data = self._load_binaries("train-images.idx3-ubyte")
-        self._data = np.append(self._data, self._load_binaries("t10k-images.idx3-ubyte"), axis=0)
+        self._data = self._load_binaries("train-images-idx3-ubyte")
+        self._data = np.append(self._data, self._load_binaries("t10k-images-idx3-ubyte"), axis=0)
         self._data = ((self._data / 255) * 2) - 1
         self._data = self._data.reshape([-1, 28, 28, 1])
 
@@ -44,7 +44,9 @@ class MNIST_GAN():
             yield data[on:off]
 
 
-mnist_data = MNIST_GAN(os.getcwd())
+mnist_data = MNIST_GAN()
+
+
 
 ''' Layer functions '''
 
@@ -139,19 +141,27 @@ def batch_norm(x, axes):
 ''' Hyperparameters '''
 
 
-amount_real_images = 32
-amount_fake_images = 32
-amount_generator_maps_l1 = 64
-amount_generator_maps_l2 = 32
-amount_generator_maps_l3 = 16
-amount_discrimninator_maps_l1 = 8
-amount_discrimninator_maps_l2 = 16
-amount_discrimninator_maps_l3 = 32
-dimensionality_z = 50
-learning_rate = 0.0004
-beta1_adam_optmimizer = 0.5
+real_imgs = 32
+fake_imgs = 32
+gen_maps_l1 = 64
+gen_maps_l2 = 32
+gen_maps_l3 = 16
+dis_maps_l1 = 8
+dis_maps_l2 = 16
+dis_maps_l3 = 32
+dim_z = (50, 1)
+learn_rate = 0.0004
+beta1 = 0.5
 epochs = 2
 
 
 
-''' '''
+''' Generator '''
+
+
+# Sample the random inputs to create vector z
+#samples_z = tf.random_uniform(shape=dimensionality_z, minval=-1, maxval=1)
+z = tf.placeholder(tf.float32, dim_z)
+
+# layer 1
+layer_1 = feed_forward_layer(z, gen_maps_l1 * 4 * 4, True, tf.nn.relu)
