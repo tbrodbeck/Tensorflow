@@ -44,7 +44,7 @@ episode_length = 200
 learning_rate = 0.01
 discount_factor = 0.97
 batch_size = 15
-show_sample_factor = 500
+show_sample_factor = 20
 
 #### the graph ####
 x = tf.placeholder(tf.float32, shape = (1,4))
@@ -133,6 +133,5 @@ with tf.Session() as session:
             gradient_dictionary_list = []
 
     #plot results
-    print('hallo')
     plt.plot(np.asarray(success_list))
     plt.show()
