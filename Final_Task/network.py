@@ -1,7 +1,5 @@
-import gym
-import numpy as np
 import tensorflow as tf
-from Final_Task.CustomCell import CustomBasicLSTMCell
+from CustomCell import CustomBasicLSTMCell
 
 
 class Policy:
