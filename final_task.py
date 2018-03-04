@@ -260,8 +260,8 @@ utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
 
 
 for iteration in range(iteration_num):
-    # deploy a new graph for every new training_iteration, minimizing the trash
-    # left over in our RAM
+    #deploy a new graph for every new training_iteration, minimizing the trash
+    #left over in our RAM
     graph = tf.Graph()
     ### First we build the train_data_set
     # The old network generates train_samples
@@ -270,9 +270,7 @@ for iteration in range(iteration_num):
         step = 0
         done = False
         if iteration == 0:
-            train_data_network = network(lstm_unit_num, observation_size,
-                                         'iteration' + str(iteration) + 'train_data_generation', action_size,
-                                         batch_size_data_creation)
+            train_data_network=network(lstm_unit_num, observation_size,'iteration'+str(iteration)+'train_data_generation', action_size, batch_size_data_creation)
         else:
             train_data_network=network(num_units,
                                        observation_size,'iteration'+str(iteration)+'train_data_generation',
@@ -280,15 +278,15 @@ for iteration in range(iteration_num):
         while not done:
             print('not_done')
             value, mu, sigma, action = train_data_network.step('unfold_iteration'+str(iteration)+'step'+str(step))
-            step+=1
             with tf.Session(graph = graph) as session:
                 session.run(tf.global_variables_initializer())
                 value, mu, sigma, action = session.run((value, mu, sigma,
                                                         action),
                             feed_dict={train_data_network.observation:utility.get_observation()})
-                print(mu)
-                print(sigma)
-                print(value)
-                print(action)
-                print(batch_size_data_creation)
-                
+                is_done, resets = utility.create_train_data_step(action, value)
+                print(is_done)
+                print('step: '+str(step))
+                step+=1
+                done = is_done
+                utility = training_util()
+
