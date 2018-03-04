@@ -10,7 +10,7 @@ class CustomBasicLSTMCell(rnn.BasicLSTMCell):
     def __init__(self, num_units, forget_bias=1.0,
                  state_is_tuple=True, activation=None, reuse=None, name=None, custom_settings=False, custom_bias=None,
                  custom_weights=None):
-        """Initialize a costum BasicLSTMCell with additional initializer for bias and weight
+        """Initialize a costum Cell with additional initializer for bias and weight
 
         Args:
           num_units: int, The number of units in the LSTM cell.
@@ -22,33 +22,35 @@ class CustomBasicLSTMCell(rnn.BasicLSTMCell):
             along the column axis.  The latter behavior will soon be deprecated.
           activation: Activation function of the inner states.  Default: `tanh`.
           reuse: (optional) Python boolean describing whether to reuse variables
-            in an existing scope.  If not `True`, and the existing scope already has
-            the given variables, an error is raised.
+            in an existing scope.  If not `True`, and the existing scope
+            already has the given variables, an error is raised.
           name: String, the name of the layer. Layers with the same name will
             share weights, but to avoid mistakes we require reuse=True in such
             cases.
-          custom_settings: If true, custom_bias and custom_weights are used and have to be set
+          custom_settings: If true, custom_bias and custom_weights are used and
+          have to be set
           custom_bias: initializier for bias
           custom_weights: initializer for weights
           When restoring from CudnnLSTM-trained checkpoints, must use
           `CudnnCompatibleLSTMCell` instead.
         """
-        super(CustomBasicLSTMCell, self).__init__(num_units, forget_bias, state_is_tuple, activation, reuse, name)
+        super(CustomBasicLSTMCell, self).__init__(num_units, forget_bias,
+                                                  state_is_tuple, activation,
+                                                  reuse, name)
 
         self._custom_bias = custom_bias
         self._custom_weights = custom_weights
         self._custom_settings = custom_settings
 
-    # custom getter
+    # custom property
     @property
     def parameters(self):
         return (self._kernel, self._bias)
 
-
     def build(self, inputs_shape):
         if inputs_shape[1].value is None:
-            raise ValueError("Expected inputs.shape[-1] to be known, saw shape: %s"
-                             % inputs_shape)
+            raise ValueError("Expected inputs.shape[-1] to be known, saw shape: "
+                             "%s" % inputs_shape)
 
         input_depth = inputs_shape[1].value
         h_depth = self._num_units
@@ -56,7 +58,8 @@ class CustomBasicLSTMCell(rnn.BasicLSTMCell):
         # custom initializer possibility
         if self._custom_settings:
             self._kernel = self.add_variable(_WEIGHTS_VARIABLE_NAME,
-                                             shape=[input_depth + h_depth, 4 * self._num_units],
+                                             shape=[input_depth + h_depth, 4 *
+                                                    self._num_units],
                                              initializer=self._custom_weights)
             self._bias = self.add_variable(_BIAS_VARIABLE_NAME,
                                            shape=[4 * self._num_units],
