@@ -1,0 +1,20 @@
+MuJoCo Pro Trial license activation key, number 109762, type 6.
+
+Issued to Tillus Brobek <t.b@riseup.net>.
+
+Expires April 4, 2018.
+
+This file activates MuJoCo Pro on a single computer with id:
+LINUX_0PC009DM20N14S01Y_62F01TCS130
+
+Do not modify this file. Its entire content, including the
+plain text section, is used by the activation manager.
+
+6a50d27245f4772afaac1d88fb6894db5e8a57cd638aebbbb8e848aff0af07ae
+4b441775d6172bb13486562598e0216f950f7acc61273993b2a0d27d7bdfe8b3
+38cb91ac6d2e6dd9b6cc28f3ae4e1761c8d9503e10c716c692ff0568a0a6602d
+728a419f725e941db331a09c558755dcfc409ba27aef4102327a81a132dca96d
+32e818a160e30c311e22da3131a9b035367c0550843f5f6b63c9b17f61ad3358
+9cf726f0d9796c1bc3d863718c8bd569d443eaf4b057e08c82c783b61923d8d0
+2dad20f5abac1c731f6d00d9ff8ce2be8542d9583580584edad38ae8d911328d
+a3d2b28c41db3ce163d876b60c906359c3c52be1d8fe99eded0afb4a19d6c232
