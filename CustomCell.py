@@ -8,8 +8,8 @@ _WEIGHTS_VARIABLE_NAME = "kernel"
 class CustomBasicLSTMCell(rnn.BasicLSTMCell):
 
     def __init__(self, num_units, forget_bias=1.0,
-                 state_is_tuple=True, activation=None, reuse=None, name=None, custom_settings=False, custom_bias=None,
-                 custom_weights=None):
+                 state_is_tuple=True, activation=None, reuse=None, name=None,
+                 custom_settings=False, custom_bias=None, custom_weights=None):
         """Initialize a costum Cell with additional initializer for bias and weight
 
         Args:
@@ -49,8 +49,8 @@ class CustomBasicLSTMCell(rnn.BasicLSTMCell):
 
     def build(self, inputs_shape):
         if inputs_shape[1].value is None:
-            raise ValueError("Expected inputs.shape[-1] to be known, saw shape: "
-                             "%s" % inputs_shape)
+            raise ValueError("Expected inputs.shape[-1] to be known, saw "
+                             "shape: %s" % inputs_shape)
 
         input_depth = inputs_shape[1].value
         h_depth = self._num_units
@@ -58,11 +58,10 @@ class CustomBasicLSTMCell(rnn.BasicLSTMCell):
         # custom initializer possibility
         if self._custom_settings:
             self._kernel = self.add_variable(_WEIGHTS_VARIABLE_NAME,
-                                             shape=[input_depth + h_depth, 4 *
-                                                    self._num_units],
+                                             shape=None,
                                              initializer=self._custom_weights)
             self._bias = self.add_variable(_BIAS_VARIABLE_NAME,
-                                           shape=[4 * self._num_units],
+                                           shape=None,
                                            initializer=self._custom_bias)
         else:
             self._kernel = self.add_variable(
