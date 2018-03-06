@@ -475,7 +475,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 3
+iteration_num = 1000
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -662,7 +662,7 @@ for iteration in range(iteration_num):
         print(loss_list)
 
         # plot
-        if (iteration % 25 == 0):
+        if (iteration % 2 == 0):
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111)
             ax.set_xlabel('Step')
