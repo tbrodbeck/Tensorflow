@@ -475,7 +475,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 2
+iteration_num = 1000
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -488,7 +488,7 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 action_size = gym.make(env_name).action_space.shape[0]
 
 # how many environments should be used to generate train_data at once
-parallel_envs = 64
+parallel_envs = 200
 
 # batch size for network in creating training data
 batch_size_data_creation = parallel_envs
@@ -604,14 +604,15 @@ for iteration in range(iteration_num):
     print(rewards_list)
 
     # plot
-
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111)
-    ax.set_xlabel('Step')
-    ax.set_ylabel('Reward')
-    ax.plot(rewards_list, label='Avarage Reward')
-    ax.legend()
-    plt.pause(0.1)
+    if (iteration % 50 == 0):
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('Step')
+        ax.set_ylabel('Reward')
+        ax.plot(rewards_list, label='Avarage Reward')
+        ax.legend()
+        plt.draw()
+        plt.pause(0.1)
 
     #Now we got the trian_data
     graph = tf.Graph()
