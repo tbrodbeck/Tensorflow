@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from utilities import TrainingUtil
 from policy import Policy
 
-
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
@@ -49,7 +48,6 @@ c1 = 1
 # c2, hyperparameter factor for weighting l_exploration loss
 c2 = 0.01
 
-
 ''' Training '''
 
 # This utility class saves weights and keeps track of the training_data
@@ -78,7 +76,6 @@ for iteration in range(iteration_num):
     # The old network generates train_samples
     train_data_network = None
 
-
     ''' Retrieving Training Samples'''
 
     with graph.as_default():
@@ -88,11 +85,11 @@ for iteration in range(iteration_num):
         # create or retrieve corresponding network for new iteration
         if iteration == 0:
             train_data_network = Policy(lstm_unit_num, observation_size,
-                                         'iteration' + str(iteration) + 'train_data_generation',
+                                        'iteration' + str(iteration) + 'train_data_generation',
                                         action_size, batch_size_data_creation)
         else:
             train_data_network = Policy(lstm_unit_num, observation_size,
-                                         'iteration' + str(iteration) + 'train_data_generation', action_size,
+                                        'iteration' + str(iteration) + 'train_data_generation', action_size,
                                         batch_size_data_creation, utility.weights)
 
         while not done:
@@ -127,7 +124,6 @@ for iteration in range(iteration_num):
                 utility = TrainingUtil(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs,
                                        train_mode, horizon)
                 utility.train_data = train_data
-
 
     ''' Optimization step '''
 
@@ -182,7 +178,6 @@ for iteration in range(iteration_num):
                     for list, losses in zip(loss_iteration_list, loss):
                         list.append(losses)
 
-
         ''' Plotting '''
 
         # retrieve data
@@ -191,7 +186,7 @@ for iteration in range(iteration_num):
             list.append(np.mean(losses))
 
         print('rwrd:', rewards_list)
-        print('loss:',loss_list)
+        print('loss:', loss_list)
 
         # plotting each x step
         plot_step = 15
@@ -225,7 +220,6 @@ for iteration in range(iteration_num):
             plt.draw()
             plt.pause(0.5)
 
-
         ''' Save the trained parameters '''
 
         with tf.Session(graph=graph) as session:
@@ -242,4 +236,3 @@ for iteration in range(iteration_num):
 # show final plot
 plt.ioff()
 plt.show()
-

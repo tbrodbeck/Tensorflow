@@ -13,7 +13,6 @@ class TrainingUtil:
         we need to save the weights, keep track of our gyms and the train_data
         stemming from the gyms
         Also a smart way to refine and provide the training samples is needed
-        TODO: maybe add a is_multiplayer_env param
 
         :param weights: weights of trainable policy
         :param parallel_train_units: number of parallel trained gym
@@ -156,25 +155,17 @@ class TrainingUtil:
         ### compute the v_targs
         rewards = np.asarray(env_aggregator['reward_list'])
         ### v_targ[t] is reward + gamma*v_targ[t+1], is reward at T(T = max_t)
-        # TODO: Can we go through both reverse indices at once?
         v_targs = np.copy(rewards)
         for reverse_index in [-i for i in range(2, len(v_targs))]:
             v_targs[reverse_index] += self.value_gamma * v_targs[reverse_index + 1]
         ### Implement gae - generalized advantage estimation
         ### shift values one to left and discount them by factor gamma
         shifted_discounted_value_estimations = np.asarray(env_aggregator['value_list'] + [0])[1:] * self.value_gamma
-        # print('shifted_discounted_value_estimations_shape'
-        #      +str(shifted_discounted_value_estimations.shape))
-        # print('rewards_shape' + str(rewards.shape))
-        # print('value_shapes' +
-        #      str(np.asarray(env_aggregator['value_list']).shape))
         delta_t = rewards + shifted_discounted_value_estimations - np.asarray(env_aggregator['value_list'])
-        # print('shape of delta_t' + str(delta_t.shape))
         gae_advantage = delta_t
         for reverse_index in [-i for i in range(2, len(delta_t))]:
             gae_advantage[reverse_index] += self.gae_lambda * self.value_gamma * gae_advantage[reverse_index + 1]
         ### put everything into the train_data
-        # print('advantage-shape:'+ str(gae_advantage.shape))
         run = {'action': np.stack(env_aggregator['action_list']), 'advantage':
             gae_advantage, 'v_targ': v_targs, 'v_estimate': np.stack(
             env_aggregator['value_list']),
@@ -197,7 +188,7 @@ class TrainingUtil:
         which is shuffled.
         Indexes the correspondung run, the beginnung and the end of a
         sequence.
-        TODO: This method is not used yet.
+
         :param length: int
         :return: list of dictionaries
         """

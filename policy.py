@@ -1,6 +1,7 @@
 import tensorflow as tf
 from custom_lstm_cell import CustomBasicLSTMCell
 
+
 class Policy:
     def __init__(self, num_units, observation_size, name, action_size,
                  batch_size, weights=None, learn_rate=None):
@@ -96,7 +97,6 @@ class Policy:
         :return: value, action_alpha, action_beta, action
         """
         with tf.variable_scope(name):
-            # TODO maybe simply saving weights in a variable would be an option
 
             lstm_out, self.state = self.lstm(self.embedding, self.state)
             value = tf.add(tf.matmul(lstm_out, self.value_readout_weights),
