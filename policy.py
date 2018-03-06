@@ -191,7 +191,7 @@ class Policy:
                                                            l_value)),
                                    tf.multiply(tf.constant(c2, dtype=tf.float32), l_explore))
             inverted_loss = tf.multiply(tf.constant(-1, dtype=tf.float32),
-                                        loss_complete)
+                                        l_clip)
             learn_step = self.optimizer.minimize(tf.reduce_mean(inverted_loss))
             self.state = self.lstm.zero_state(self.batch_size, dtype=tf.float32)
             losses = [tf.reduce_mean(loss_complete), tf.reduce_mean(l_clip),
