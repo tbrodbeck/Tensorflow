@@ -546,7 +546,6 @@ utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
 # keeping track of training success
 rewards_list = []
 plt.ion()
-plt.show()
 
 print('Start training!')
 
