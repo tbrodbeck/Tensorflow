@@ -461,7 +461,10 @@ class Network:
         action_alpha_readout_bias = self.action_alpha_readout_bias
         action_beta_readout_weights = self.action_beta_readout_weights
         action_beta_readout_bias = self.action_beta_readout_bias
-        return kernel, bias, embedding_weights, embedding_bias, value_readout_weights, value_readout_bias, action_alpha_readout_weights, action_alpha_readout_bias, action_beta_readout_weights, action_beta_readout_bias 
+        return [kernel, bias, embedding_weights, embedding_bias,
+                value_readout_weights, value_readout_bias,
+                action_alpha_readout_weights, action_alpha_readout_bias,
+                action_beta_readout_weights, action_beta_readout_bias] 
 
 
 keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
@@ -474,7 +477,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 100
+iteration_num = 1
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -491,9 +494,9 @@ parallel_envs = 200
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 100
+batch_size_parameter_optimization = 50
 # amount of epochs to train over one set of training_data
-optimization_epochs = 10
+optimization_epochs = 100
 
 # size of the lstm cell
 lstm_unit_num = 128
@@ -566,6 +569,7 @@ for iteration in range(iteration_num):
                 print('step: '+str(step))
                 if train_mode is 'horizon' and step%train_run_length==0:
                     train_data_network.reset_states()
+
                 step+=1
                 done = is_done
 
@@ -581,10 +585,9 @@ for iteration in range(iteration_num):
                 train_data = utility.train_data 
                 utility = Training_util(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs, train_mode, train_run_length)
                 utility.train_data = train_data
-
+    
     rewards_list.append(utility.get_average_reward())
     print(rewards_list)
-
     #Now we got the trian_data
     graph = tf.Graph()
     with graph.as_default():
@@ -596,7 +599,6 @@ for iteration in range(iteration_num):
         ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
             print(epoch)
-
             #this is messy, might still work
             used_samples = train_runs - (train_runs%batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
@@ -607,41 +609,42 @@ for iteration in range(iteration_num):
             train_data = utility.train_data
             # every index actually is a list of indices
             
-
-
-            train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
+            for enum, index in enumerate(train_sample_plan):
+                rand = np.random.randint(0,20)
+                #print('Optimization:Iteration:'+str(iteration)+'Epoch'+str(epoch)+'Run'+str(enum))
+                #print(index)
+                #print([train_data[i]['alpha'].shape for i in index])
+                alpha = np.stack([train_data[i]['alpha'] for i in index], axis = 1)
+                beta = np.stack([train_data[i]['beta'] for i in index], axis = 1)
+                #print('shape_beta:' + str(beta.shape))
+                advantages = np.stack([train_data[i]['advantage'] for i in index], axis = 1)
+                #print('shape advantages' + str(advantages.shape))
+                v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis = 1)
+                #print('vshape' + str(v_targ.shape))
+                action = np.stack([train_data[i]['action'] for i in index], axis = 1)
+                #print('action_shape: ' + str(action.shape))
+                observation = np.stack([train_data[i]['observation'] for i in index], axis = 1)
+                #print('observation_shape' + str(observation.shape))
+                train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
                                             str(epoch),training_sequence_length, epsilon, c1, c2)
-            with tf.Session(graph = graph) as session:
-                for enum, index in enumerate(train_sample_plan):
-                    rand = np.random.randint(0, 20)
-
-                    alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
-                    beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
-                    # print('shape_beta:' + str(beta.shape))
-                    advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
-                    # print('shape advantages' + str(advantages.shape))
-                    v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
-
-                    action = np.stack([train_data[i]['action'] for i in index], axis=1)
-
-                    observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
-
-                #can not preconstruct initializer, as new variables are added
-                session.run(tf.global_variables_initializer())
-                #print(tf.trainable_variables())
-                #print('trainable variables:')
-                _, loss = session.run((train_step, loss), feed_dict =
-                            {optimizing_network.alpha: alpha,
-                             optimizing_network.beta: beta,
-                             optimizing_network.gae_advantage: advantages,
-                             optimizing_network.target_value: v_targ,
-                             optimizing_network.action: action,
-                             optimizing_network.optimization_observation:
-                             observation})
-
+                with tf.Session(graph = graph) as session:
+                    #can not preconstruct initializer, as new variables are added
+                    session.run(tf.global_variables_initializer())
+                    #print(tf.trainable_variables())
+                    #print('trainable variables:')
+                    _, loss = session.run((train_step, loss), feed_dict = 
+                                {optimizing_network.alpha: alpha, 
+                                 optimizing_network.beta: beta, 
+                                 optimizing_network.gae_advantage: advantages,
+                                 optimizing_network.target_value: v_targ, 
+                                 optimizing_network.action: action, 
+                                 optimizing_network.optimization_observation:
+                                 observation})
+                    if rand == 0:
+                        print(loss)
         with tf.Session(graph = graph) as session:
             session.run(tf.global_variables_initializer())
-            parameters = session.run(optimizing_network.network_parameters())
+            parameters = session.run(train_data_network.network_parameters())
             weights = {}
 
             #keys are defined in the hyperparameter list
