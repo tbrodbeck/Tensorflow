@@ -51,6 +51,7 @@ class Policy:
                 self.value_readout_bias = tf.Variable(tf.constant(
                     weights['value_readout_bias']))
                 self.state = self.lstm.zero_state(batch_size, dtype=tf.float32)
+            # else initializing weights
             else:
                 self.batch_size = batch_size
                 self.action_size = action_size

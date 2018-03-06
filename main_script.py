@@ -45,9 +45,9 @@ learn_rate = 0.005
 # epsilon for l_clip loss function
 epsilon = 0.2
 # c1, hyperparameter factor for weighting l_value loss
-c1 = 2
+c1 = 1
 # c2, hyperparameter factor for weighting l_exploration loss
-c2 = 1
+c2 = 0.01
 
 
 ''' Training '''
@@ -69,7 +69,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 print('Start training!')
 
 for iteration in range(iteration_num):
-    # for plotting
+    # for retrieving loss
     loss_iteration_list = [[], [], [], []]
     # deploy a new graph for every new training_iteration, minimizing the
     # trash left over in our RAM
@@ -96,7 +96,9 @@ for iteration in range(iteration_num):
                                         batch_size_data_creation, utility.weights)
 
         while not done:
-            # generate one step of the policy
+            print('Sampling: Iteration:' + str(iteration) + ' Step:' + str(step))
+
+            # generate one action with the policy
             value, alpha, beta, action = train_data_network.step(
                 'unfold_iteration' + str(iteration) + 'step' + str(step),
                 step)
@@ -105,15 +107,14 @@ for iteration in range(iteration_num):
                 value, alpha, beta, action = session.run((value, alpha, beta, action),
                                                          feed_dict={
                                                              train_data_network.observation: utility.get_observation()})
+                # applying the action in the environment
                 is_done, resets = utility.create_train_data_step(action, value, alpha, beta)
-
-                print('Sampling: Iteration:' + str(iteration) +' Step:' + str(step))
-
                 if train_mode is 'horizon' and step % horizon == 0:
                     train_data_network.reset_states()
                 step += 1
                 done = is_done
 
+        # ensuring that utlity.weights exits in the first run for the creation of optimization_network
         if iteration == 0:
             with tf.Session(graph=graph) as session:
                 session.run(tf.global_variables_initializer())
@@ -139,9 +140,8 @@ for iteration in range(iteration_num):
                                     batch_size_parameter_optimization,
                                     utility.weights, learn_rate=learn_rate)
 
-        ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
-            # this is messy, might still work
+            # creating batches for training
             used_samples = train_runs - (train_runs % batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
                                            (int(used_samples / batch_size_parameter_optimization),
@@ -150,6 +150,7 @@ for iteration in range(iteration_num):
             train_sample_plan = train_sample_plan.tolist()
             train_data = utility.train_data
 
+            # randomly draw examples
             for count, sample in enumerate(train_sample_plan):
                 print('Optimization: Iteration:' + str(iteration) + ' Epoch:' + str(epoch) + ' Run:' + str(count))
 
@@ -164,6 +165,7 @@ for iteration in range(iteration_num):
                     'iteration' + str(iteration) + 'optimizationepoch' + str(epoch), training_sequence_length, epsilon,
                     c1, c2)
 
+                # run train_step
                 with tf.Session(graph=graph) as session:
                     # can not preconstruct initializer, as new variables are added
                     session.run(tf.global_variables_initializer())
@@ -176,6 +178,7 @@ for iteration in range(iteration_num):
                      optimizing_network.optimization_observation:
                          observation})
 
+                    # retrieval for plotting
                     for list, losses in zip(loss_iteration_list, loss):
                         list.append(losses)
 
