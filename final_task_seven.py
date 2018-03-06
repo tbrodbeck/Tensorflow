@@ -486,10 +486,10 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 # have to model a probability density function pdf over it)
 action_size = gym.make(env_name).action_space.shape[0]
 
-#how many environments should be used to generate train_data at once
-parallel_envs = 200
+# how many environments should be used to generate train_data at once
+parallel_envs = 32
 
-#batch size for network in creating training data
+# batch size for network in creating training data
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
@@ -511,7 +511,7 @@ gae_lambda = 0.99
 train_runs = 400
 
 # length of one training run, THIS IS NOT USED IN 'runs'
-train_run_length = 30
+train_run_length = 200
 
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
