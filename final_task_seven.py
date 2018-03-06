@@ -546,6 +546,7 @@ utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
 # keeping track of training success
 rewards_list = []
 plt.ion()
+plt.show()
 
 print('Start training!')
 
@@ -611,7 +612,7 @@ for iteration in range(iteration_num):
     ax.set_ylabel('Loss')
     ax.plot(rewards_list, label='Avarage Reward')
     ax.legend()
-    plt.show()
+    plt.pause(0.05)
 
     #Now we got the trian_data
     graph = tf.Graph()
