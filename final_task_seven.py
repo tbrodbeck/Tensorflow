@@ -63,7 +63,7 @@ class Training_util:
     def get_average_reward(self):
         rewards_acc = []
         for sample in self.train_data:
-            rewards_acc.append(acc['reward'])
+            rewards_acc.append(sample['reward'])
         return np.mean(np.stack(rewards_acc))
 
     def create_train_data_step(self, actions, value_estimate, alpha, beta):
