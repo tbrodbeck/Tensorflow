@@ -602,6 +602,15 @@ for iteration in range(iteration_num):
     rewards_list.append(utility.get_average_reward())
     print(rewards_list)
 
+    # plot
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('Step')
+    ax.set_ylabel('Loss')
+    ax.plot(rewards_list, label='Avarage Reward')
+    ax.legend()
+    plt.draw()
+
     #Now we got the trian_data
     graph = tf.Graph()
     with graph.as_default():
@@ -664,11 +673,5 @@ for iteration in range(iteration_num):
                                     env_name, train_runs, train_mode,
                                     train_run_length)
 
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111)
-        ax.set_xlabel('Step')
-        ax.set_ylabel('Loss')
-        ax.plot(rewards_list, label='Avarage Reward')
-        ax.legend()
-        plt.show()
+
                 
