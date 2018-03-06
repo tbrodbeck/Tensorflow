@@ -433,8 +433,7 @@ class Network:
             tf.summary.scalar("loss_complete", tf.reduce_mean(loss_complete))
             summaries = tf.summary.merge_all()
 
-            inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32),
-                                        loss_complete)
+            inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32), loss_complete)
             learn_step = self.optimizer.minimize(tf.reduce_mean(inverted_loss))
             self.state = self.lstm.zero_state(self.batch_size, dtype = tf.float32)
             return learn_step , summaries
