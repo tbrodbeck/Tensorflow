@@ -4,7 +4,6 @@ import gym
 from CustomCell import CustomBasicLSTMCell
 import random
 
-
 class Training_util:
     ### TODO: maybe add a is_multiplayer_env param
 
@@ -60,6 +59,12 @@ class Training_util:
         self.train_mode = train_mode
         self.train_runs = train_runs
         self.horizon = horizon
+    
+    def get_average_reward(self):
+        rewards_acc = []
+        for sample in self.train_data:
+            rewards_acc.append(acc['reward'])
+        return np.mean(np.stack(rewards_acc))
 
     def create_train_data_step(self, actions, value_estimate, alpha, beta):
         ### actions is numpy array of parallel_train_units, action_size
@@ -88,6 +93,9 @@ class Training_util:
                                                       self.envs_aggregator,
                                                                            alpha,
                                                                           beta):
+            
+            env_action = action*2
+            env_action = env_action-1
             new_observation, reward, run_done, _ = env.step(action)
             self.observation.append(new_observation)
             env_aggregator['alpha_list'].append(alpha)
@@ -112,7 +120,9 @@ class Training_util:
         for action, value, env, env_aggregator, alpha_val, beta_val in zip(actions, value_estimate, self.envs,
                                                       self.envs_aggregator,
                                                                            alpha,
-                                                                          beta):
+                                                              beta):
+            env_action = action*2
+            env_action = env_action-1
             new_observation, reward, run_done, _ = env.step(action)
             self.observation.append(new_observation)
             env_aggregator['alpha_list'].append(alpha_val)
@@ -233,10 +243,10 @@ class Network:
         :param action_size: int, size of respective env.action_space
         :param batch_size: int
         :param weights: parameters of policy
+        :param learn_rate: if given, the network is in optimization mode, uses
+        learn_rate as learning_rate
         """
         with tf.variable_scope(name):
-            if learn_rate is not None:
-                self.optimizer = tf.train.AdamOptimizer(learn_rate)
             initializer = tf.initializers.truncated_normal()
 
             # if weights are set
@@ -300,6 +310,10 @@ class Network:
                     shape=(num_units, 1)))
                 self.value_readout_bias = tf.Variable(initializer(shape=(1, 1)))
                 self.state = self.lstm.zero_state(batch_size, dtype=tf.float32)
+            
+
+            if learn_rate is not None:
+                self.optimizer = tf.train.AdamOptimizer(learn_rate)
 
     def reset_states(self):
         self.state = self.lstm.zero_state(self.batch_size, dtype = tf.float32)
@@ -324,13 +338,24 @@ class Network:
             lstm_out, self.state = self.lstm(self.embedding, self.state)
             value = tf.add(tf.matmul(lstm_out, self.value_readout_weights),
                            self.value_readout_bias)
-            action_alpha=tf.nn.relu( tf.add(tf.matmul(lstm_out,
-                                                      self.action_alpha_readout_weights),self.action_alpha_readout_bias))
-            action_beta=tf.nn.relu(tf.add(tf.matmul(lstm_out,
+            action_alpha=tf.add(tf.nn.relu( tf.add(tf.matmul(lstm_out,
+                                                      self.action_alpha_readout_weights),self.action_alpha_readout_bias)),tf.constant(1,
+                                                                                                                                     dtype
+                                                                                                                                     =
+                                                                                                                                     tf.float32))
+            action_beta=tf.add(tf.nn.relu(tf.add(tf.matmul(lstm_out,
                                           self.action_beta_readout_weights),
-                                           self.action_beta_readout_bias))
+                                           self.action_beta_readout_bias)),tf.constant(1,
+                                                                                      dtype
+                                                                                      =
+                                                                                      tf.float32))
             action = tf.distributions.Beta(action_alpha, action_beta).sample()
             return value, action_alpha, action_beta, action
+    def multiply_t(self, x,y, sequence_length): 
+        """This function computes the tf.matmul operation for some
+        time-series input of size [t_steps, batch_size, vector_size] and a
+        weight matriy of size [vector_size, output_size]"""
+        return tf.matmul(x,tf.stack([y for _ in range(sequence_length)],0))
 
     def optimize(self, name, sequence_length, epsilon, c1, c2):
         """
@@ -359,84 +384,72 @@ class Network:
                                                            (sequence_length,
                                                             self.batch_size,
                                                             self.observation_size))
-            loss_explore = []
-            loss_value = []
-            loss_clip = []
+
             self.state = self.lstm.zero_state(self.batch_size, dtype=tf.float32)
-            for t_step in range(sequence_length):
-                embedding = tf.nn.relu_layer(self.optimization_observation[t_step,:,:], self.embedding_weights, tf.squeeze(self.embedding_bias))
-                lstm_out, self.state = self.lstm(embedding, self.state)
-                val_pred = tf.add(tf.matmul(lstm_out, self.value_readout_weights),
-                                 tf.squeeze(self.value_readout_bias))
-                alpha_pred = tf.nn.relu_layer(lstm_out,
-                                              self.action_alpha_readout_weights,
-                                              tf.squeeze(self.action_alpha_readout_bias))
-                beta_pred = tf.nn.relu_layer(lstm_out,
-                                              self.action_beta_readout_weights,
-                                              tf.squeeze(self.action_beta_readout_bias))
-                #print('alpha_pred shape')
-                #print(alpha_pred.get_shape())
-                #print('beta_pred_shape')
-                #print(beta_pred.get_shape())
-                #print('action is of size:')
-                #print(self.action[0,:,:].get_shape())
-                #print('squeezed action is of shape:')
-                #print(self.action[0,:,:].get_shape())
-                policy_new = tf.distributions.Beta(alpha_pred, beta_pred)
-                policy_old = tf.distributions.Beta(self.alpha[t_step,:,:],
-                                                   self.beta[t_step,:,:])
-                #print('squeezed action is of size')
-                #print(tf.squeeze(self.action[t_step,:,:]).get_shape())
-                prob_new = policy_new.prob(tf.squeeze(self.action[t_step,:,:]))
-                prob_old = policy_old.prob(tf.squeeze(self.action[t_step,:,:]))
-                entropy = policy_new.entropy()
-                #print('probs-new are of shape:')
-                #print(prob_new.get_shape())
-                #print('probs-old are of shape: ')
-                #print(prob_old.get_shape())
-                entropy_product = tf.ones(self.batch_size)
-                prob_product_old = tf.ones(self.batch_size)
-                prob_product_new = tf.ones(self.batch_size)
-                for i in range(self.action_size):
-                    #print('prob_prod_old_shape')
-                    #print(prob_product_old.get_shape())
-                    #print('prob_old_shape')
-                    #print(prob_old.get_shape())
-                    prob_product_old = tf.multiply(prob_product_old, prob_old[:,i])
-                    prob_product_new = tf.multiply(prob_product_new, prob_new[:,i])
-                    entropy_product = tf.multiply(entropy_product, entropy[:,i])
-                
-                l_explore = tf.reshape(entropy_product,shape=(2,1))
-                #print('shape of entropy_loss' + str(l_explore.get_shape))
-                #print('shape of val_pred: ' + str(val_pred.get_shape()))
-                #print('shape of target_value' +
-                #      str(self.target_value[t_step,:].get_shape()))
-                l_value = tf.square(tf.subtract(val_pred, tf.reshape(self.target_value[t_step,:], (self.batch_size,1))))
-                prob_ratio = tf.divide(prob_product_new, prob_product_old)
-                l_clip = tf.minimum(self.gae_advantage[t_step,:]*prob_ratio, tf.clip_by_value(prob_ratio, 1-epsilon, 1+epsilon)*self.gae_advantage[t_step,:])
-                loss_clip.append(tf.squeeze(l_clip))
-                loss_value.append(tf.squeeze(l_value))
-                loss_explore.append(tf.squeeze(l_explore))
-            loss_clip = tf.stack(loss_clip)
-            loss_value = tf.stack(loss_value)
-            loss_explore = tf.stack(loss_explore)
-            loss_complete = tf.add(tf.subtract(loss_clip,
+            embedding =  tf.nn.relu(tf.add(self.multiply_t(self.optimization_observation,
+                                              self.embedding_weights,
+                                              sequence_length),
+                              tf.squeeze(self.embedding_bias)))
+            lstm_out, self.state = tf.nn.dynamic_rnn(self.lstm, embedding,
+                                                     initial_state =
+                                                     self.state, time_major =
+                                                     True)
+            val_pred = tf.add(self.multiply_t(lstm_out,
+                                              self.value_readout_weights,
+                                              sequence_length),
+                             tf.squeeze(self.value_readout_bias))
+            alpha_pred = tf.add(tf.nn.relu(tf.add(self.multiply_t(lstm_out,
+                                                     self.action_alpha_readout_weights,
+                                                          sequence_length),
+                                          tf.squeeze(self.action_alpha_readout_bias))),tf.constant(1,dtype=tf.float32))
+            beta_pred = tf.add(tf.nn.relu(tf.add(self.multiply_t(lstm_out,
+                                          self.action_beta_readout_weights,
+                                                          sequence_length),
+                                          tf.squeeze(self.action_beta_readout_bias))),tf.constant(1,dtype=tf.float32))
+            #print('alpha_pred shape')
+            #print(alpha_pred.get_shape())
+            #print('beta_pred_shape')
+            #print(beta_pred.get_shape())
+            #print('action is of size:')
+            #print(self.action[0,:,:].get_shape())
+            #print('squeezed action is of shape:')
+            #print(self.action[0,:,:].get_shape())
+            policy_new = tf.distributions.Beta(alpha_pred, beta_pred)
+            policy_old = tf.distributions.Beta(self.alpha, self.beta)
+            #print('squeezed action is of size')
+            #print(tf.squeeze(self.action[t_step,:,:]).get_shape())
+            prob_new = policy_new.prob(tf.squeeze(self.action))
+            prob_old = policy_old.prob(tf.squeeze(self.action))
+            entropy = policy_new.entropy()
+            #print('shape of probabilities now: old:' + str(prob_new.get_shape())
+            #      + 'new: ' + str(prob_new.get_shape()))
+            #print('probs-new are of shape:')
+            #print(prob_new.get_shape())
+            #print('probs-old are of shape: ')
+            #print(prob_old.get_shape())
+            entropy_product = tf.reduce_prod(entropy,axis=2)
+            prob_product_old = tf.reduce_prod(prob_old, axis = 2)
+            prob_product_new = tf.reduce_prod(prob_new, axis = 2)
+            #print('shape of entropy_loss' + str(l_explore.get_shape))
+            #print('shape of val_pred: ' + str(val_pred.get_shape()))
+            #print('shape of target_value' +
+            #      str(self.target_value[t_step,:].get_shape()))
+            l_explore = entropy_product
+            l_value = tf.square(tf.subtract(tf.squeeze(val_pred), self.target_value))
+            prob_ratio = tf.divide(prob_product_new, prob_product_old)
+            l_clip = tf.minimum(tf.multiply(prob_ratio, self.gae_advantage),tf.multiply(tf.clip_by_value(prob_ratio, 1-epsilon, 1+epsilon),self.gae_advantage))
+            loss_complete = tf.add(tf.subtract(l_clip,
                                                tf.multiply(tf.constant(c1,dtype=tf.float32),
-                                                           loss_value)),
-                                   tf.multiply(tf.constant(c2,dtype=tf.float32),loss_explore))
-            print('shape of loss' + str(loss_complete.get_shape))
-
-            # for plotting
-            tf.summary.scalar("loss_clip", tf.reduce_mean(loss_clip))
-            tf.summary.scalar("loss_value", tf.reduce_mean(loss_value))
-            tf.summary.scalar("loss_explore", tf.reduce_mean(loss_explore))
-            tf.summary.scalar("loss_complete", tf.reduce_mean(loss_complete))
-            summaries = tf.summary.merge_all()
-
-            inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32), loss_complete)
+                                                           l_value)),
+                                   tf.multiply(tf.constant(c2,dtype=tf.float32),l_explore))
+            #print('shape of loss' + str(loss_complete.get_shape()))
+            inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32),
+                                        loss_complete)
             learn_step = self.optimizer.minimize(tf.reduce_mean(inverted_loss))
             self.state = self.lstm.zero_state(self.batch_size, dtype = tf.float32)
-            return learn_step , summaries
+            losses = [tf.reduce_mean(loss_complete), tf.reduce_mean(l_clip),
+                      tf.reduce_mean(l_value), tf.reduce_mean(l_explore)]
+            return learn_step, losses
 
     def network_parameters(self):
         kernel, bias = self.lstm.parameters
@@ -473,12 +486,12 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 # have to model a probability density function pdf over it)
 action_size = gym.make(env_name).action_space.shape[0]
 #how many environments should be used to generate train_data at once
-parallel_envs = 100
+parallel_envs = 200
 #batch size for network in creating training data
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 2
+batch_size_parameter_optimization = 50
 # amount of epochs to train over one set of training_data
 optimization_epochs = 100
 
@@ -492,24 +505,22 @@ value_gamma = 0.99
 gae_lambda = 0.99
 
 # amount of training runs to assemble for one training-optimization iteration
-train_runs = 100
+train_runs = 400
 # length of one training run, THIS IS NOT USED IN 'runs'
 train_run_length = 30
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
 assert training_sequence_length <= train_run_length 
-# how many full episodes of training are performed on one trainingset
-optimization_batches = 10
 
 # train mode, either 'horizon' or 'runs'
 train_mode = 'horizon'
 
 #truncation factor USE IN 'horizon' MODE ONLY!
-truncation_factor = 5
+truncation_factor = 1000000
 #learn_rate
-learn_rate = 0.01
+learn_rate = 0.0005
 #epsilon
-epsilon = 0.2
+epsilon = 0.15
 #c1, hyperparameter factor for weighting l_value loss
 c1 = 1
 #c2, hyperparameter factor for weighting l_exploration loss
@@ -517,10 +528,7 @@ c2 = 1
 ### This utility class saves weights and keeps track of the training_data
 utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
                         env_name, train_runs, train_mode, train_run_length)
-
-# for plotting
-summary_writer = tf.summary.FileWriter("./summaries")
-
+rewards_list = []
 print('Start training!')
 
 for iteration in range(iteration_num):
@@ -556,9 +564,8 @@ for iteration in range(iteration_num):
                 is_done, resets = utility.create_train_data_step(action, value, alpha, beta)
                 print('iteration: '+str(iteration))
                 print('step: '+str(step))
-
-                if train_mode is 'horizon' and step % train_run_length == 0:
-                    print('resetting')
+                if train_mode is 'horizon' and step%train_run_length==0:
+                    train_data_network.reset_states()
 
                 step+=1
                 done = is_done
@@ -575,8 +582,9 @@ for iteration in range(iteration_num):
                 train_data = utility.train_data 
                 utility = Training_util(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs, train_mode, train_run_length)
                 utility.train_data = train_data
-
-
+    
+    rewards_list.append(utility.get_average_reward())
+    print(rewards_list)
     #Now we got the trian_data
     graph = tf.Graph()
     with graph.as_default():
@@ -587,6 +595,7 @@ for iteration in range(iteration_num):
                                    utility.weights, learn_rate = learn_rate)
         ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
+            print(epoch)
             #this is messy, might still work
             used_samples = train_runs - (train_runs%batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
@@ -596,9 +605,10 @@ for iteration in range(iteration_num):
             train_sample_plan = train_sample_plan.tolist()
             train_data = utility.train_data
             # every index actually is a list of indices
-
+            
             for enum, index in enumerate(train_sample_plan):
-                print('Optimization:Iteration:'+str(iteration)+'Epoch'+str(epoch)+'Run'+str(enum))
+                rand = np.random.randint(0,20)
+                #print('Optimization:Iteration:'+str(iteration)+'Epoch'+str(epoch)+'Run'+str(enum))
                 #print(index)
                 #print([train_data[i]['alpha'].shape for i in index])
                 alpha = np.stack([train_data[i]['alpha'] for i in index], axis = 1)
@@ -612,22 +622,23 @@ for iteration in range(iteration_num):
                 #print('action_shape: ' + str(action.shape))
                 observation = np.stack([train_data[i]['observation'] for i in index], axis = 1)
                 #print('observation_shape' + str(observation.shape))
-                learn_step, summaries  = optimizing_network.optimize('iteration' + str(iteration) + 'optimizationepoch' +
-                                                           str(epoch), training_sequence_length, epsilon, c1, c2)
+                train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
+                                            str(epoch),training_sequence_length, epsilon, c1, c2)
                 with tf.Session(graph = graph) as session:
                     #can not preconstruct initializer, as new variables are added
                     session.run(tf.global_variables_initializer())
                     #print(tf.trainable_variables())
                     #print('trainable variables:')
-                    _, summaries = session.run([learn_step, summaries], feed_dict =
+                    _, loss = session.run((train_step, loss), feed_dict = 
                                 {optimizing_network.alpha: alpha, 
                                  optimizing_network.beta: beta, 
                                  optimizing_network.gae_advantage: advantages,
                                  optimizing_network.target_value: v_targ, 
                                  optimizing_network.action: action, 
-                                 optimizing_network.optimization_observation: observation})
-                    print(enum)
-                    print(summaries)
+                                 optimizing_network.optimization_observation:
+                                 observation})
+                    if rand == 0:
+                        print(loss)
         with tf.Session(graph = graph) as session:
             session.run(tf.global_variables_initializer())
             parameters = session.run(train_data_network.network_parameters())
