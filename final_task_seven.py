@@ -609,7 +609,7 @@ for iteration in range(iteration_num):
     ax.set_ylabel('Loss')
     ax.plot(rewards_list, label='Avarage Reward')
     ax.legend()
-    plt.draw()
+    plt.show(block=False)
 
     #Now we got the trian_data
     graph = tf.Graph()
