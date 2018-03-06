@@ -2,7 +2,7 @@ import random
 import gym
 import numpy as np
 
-class Training_util:
+class TrainingUtil:
 
     def __init__(self, weights, parallel_train_units, gae_lambda, value_gamma,
                  env_name, train_runs, train_mode, horizon=None):
@@ -59,6 +59,9 @@ class Training_util:
         self.horizon = horizon
 
     def get_average_reward(self):
+        """
+        :return: avarage reward of the train_data
+        """
         rewards_acc = []
         for sample in self.train_data:
             rewards_acc.append(sample['reward'])
@@ -83,6 +86,9 @@ class Training_util:
             return self._create_train_data_step_horizon(actions, value_estimate, alpha, beta)
 
     def _create_train_data_step_runs(self, actions, value_estimate, alpha, beta):
+        """
+        if train_mode is run
+        """
         assert len(actions) == len(self.envs)
         assert len(actions) == len(value_estimate)
         self.observation = []
@@ -109,8 +115,10 @@ class Training_util:
         self.observation = np.stack(self.observation)
         return (is_done, resets)
 
-    def _create_train_data_step_horizon(self, actions, value_estimate, alpha,
-                                        beta):
+    def _create_train_data_step_horizon(self, actions, value_estimate, alpha, beta):
+        """
+        if train_mode is horizon
+        """
         assert len(actions) == len(self.envs)
         assert len(actions) == len(value_estimate)
         resets = []
@@ -195,7 +203,7 @@ class Training_util:
         """
         dicts = []
 
-        for run_nr, run in enumerate(train_data):
+        for run_nr, run in enumerate(self.train_data):
             # chose on training occurance
             training = run['action']
             print(len(training))

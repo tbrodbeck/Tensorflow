@@ -1,7 +1,7 @@
 import tensorflow as tf
 from custom_lstm_cell import CustomBasicLSTMCell
 
-class Network:
+class Policy:
     def __init__(self, num_units, observation_size, name, action_size,
                  batch_size, weights=None, learn_rate=None):
         """
@@ -86,20 +86,17 @@ class Network:
     def reset_states(self):
         self.state = self.lstm.zero_state(self.batch_size, dtype=tf.float32)
 
-    def step(self, name, step, truncation_factor):
+    def step(self, name, step):
         """
         we run the policy for one step and retrieve the observable data
 
         :param name: str, step name
         :param step: int
-        :param truncation_factor: int
         :return: value, action_alpha, action_beta, action
         """
         with tf.variable_scope(name):
             # TODO maybe simply saving weights in a variable would be an option
-            if step % truncation_factor == 0:
-                self.state = self.lstm.zero_state(self.batch_size, dtype=
-                tf.float32)
+
             lstm_out, self.state = self.lstm(self.embedding, self.state)
             value = tf.add(tf.matmul(lstm_out, self.value_readout_weights),
                            self.value_readout_bias)
@@ -202,6 +199,9 @@ class Network:
             return learn_step, losses
 
     def network_parameters(self):
+        """
+        :return: all trainable parameters of the network
+        """
         kernel, bias = self.lstm.parameters
         embedding_weights = self.embedding_weights
         embedding_bias = self.embedding_bias
