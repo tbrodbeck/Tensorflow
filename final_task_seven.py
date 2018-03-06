@@ -582,8 +582,7 @@ for iteration in range(iteration_num):
                 train_data = utility.train_data 
                 utility = Training_util(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs, train_mode, train_run_length)
                 utility.train_data = train_data
-    
-    rewards_list.append(utility.get_average_reward())
+
 
     #Now we got the trian_data
     graph = tf.Graph()
@@ -596,7 +595,10 @@ for iteration in range(iteration_num):
         ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
             print(epoch)
+
+            rewards_list.append(utility.get_average_reward())
             print(rewards_list)
+
             #this is messy, might still work
             used_samples = train_runs - (train_runs%batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
