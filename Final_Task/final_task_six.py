@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import gym
-from CustomCell import CustomBasicLSTMCell
+from custom_lstm_cell import CustomBasicLSTMCell
 import random
 
 class Training_util:

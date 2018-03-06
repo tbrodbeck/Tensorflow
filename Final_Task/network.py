@@ -1,5 +1,5 @@
 import tensorflow as tf
-from CustomCell import CustomBasicLSTMCell
+from custom_lstm_cell import CustomBasicLSTMCell
 
 
 class Policy:
