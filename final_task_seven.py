@@ -564,15 +564,16 @@ plt.ion()
 print('Start training!')
 
 for iteration in range(iteration_num):
+    # for plotting
+    loss_iteration_list = [[],[],[],[]]
     # deploy a new graph for every new training_iteration, minimizing the
     # trash left over in our RAM
     graph = tf.Graph()
-
     # First we build the train_data_set
     # The old network generates train_samples
     train_data_network = None
 
-    ''' Getting Training Samples'''
+    ''' Retrieving Training Samples'''
 
     with graph.as_default():
         step = 0
@@ -583,7 +584,6 @@ for iteration in range(iteration_num):
             train_data_network = Network(lstm_unit_num, observation_size,
                           'iteration'+str(iteration)+'train_data_generation',
                           action_size, batch_size_data_creation)
-
         else:
             train_data_network = Network(lstm_unit_num, observation_size, 'iteration'+str(iteration)+'train_data_generation', action_size, batch_size_data_creation, utility.weights)
 
@@ -624,9 +624,11 @@ for iteration in range(iteration_num):
                                      action_size,
                                      batch_size_parameter_optimization,
                                      utility.weights, learn_rate=learn_rate)
+
         ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
             # this is messy, might still work
+            print('Epoch:', epoch)
             used_samples = train_runs - (train_runs % batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
                                            (int(used_samples / batch_size_parameter_optimization),
@@ -635,15 +637,15 @@ for iteration in range(iteration_num):
             train_sample_plan = train_sample_plan.tolist()
             train_data = utility.train_data
 
-            # every index actually is a list of indices
-            for enum, index in enumerate(train_sample_plan):
-                print('Optimization:Iteration:' + str(iteration) + 'Epoch' + str(epoch) + 'Run' + str(enum))
-                alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
-                beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
-                advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
-                v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
-                action = np.stack([train_data[i]['action'] for i in index], axis=1)
-                observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
+            for count, sample in enumerate(train_sample_plan):
+                print('Optimization:Iteration:' + str(iteration) + 'Epoch' + str(epoch) + 'Run' + str(count))
+                alpha = np.stack([train_data[i]['alpha'] for i in sample], axis=1)
+                beta = np.stack([train_data[i]['beta'] for i in sample], axis=1)
+                advantages = np.stack([train_data[i]['advantage'] for i in sample], axis=1)
+                v_targ = np.stack([train_data[i]['v_targ'] for i in sample], axis=1)
+                action = np.stack([train_data[i]['action'] for i in sample], axis=1)
+                observation = np.stack([train_data[i]['observation'] for i in sample], axis=1)
+
                 train_step, loss = optimizing_network.optimize(
                     'iteration' + str(iteration) + 'optimizationepoch' + str(epoch), training_sequence_length, epsilon,
                     c1, c2)
@@ -660,26 +662,26 @@ for iteration in range(iteration_num):
                                  optimizing_network.optimization_observation:
                                  observation})
 
-                    print("loss:")
-                    print(loss)
-                    for list, losses in zip(loss_list, loss):
+                    for list, losses in zip(loss_iteration_list, loss):
                         list.append(losses)
 
         rewards_list.append(utility.get_average_reward())
+        for list, losses in zip(loss_list, loss_iteration_list):
+            list.append(np.mean(losses))
         print(rewards_list)
         print(loss_list)
 
-        # plot
-        plot_step = 5
-        if ((iteration % 5)-1 == 0):
+        # ploting
+        plot_step = 2
+        if ((iteration % plot_step)-1 == 0):
+            # plot of reward
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111)
             ax.set_xlabel('Step')
             ax.set_ylabel('Reward')
             ax.plot(rewards_list, label='Avarage Reward')
             ax.legend()
-
-
+            # plot of loss functions
             fig2 = plt.figure(figsize=(10, 10))
             ax1 = fig2.add_subplot(221)
             ax1.set_xlabel('Step')
@@ -697,9 +699,7 @@ for iteration in range(iteration_num):
             ax4.set_xlabel('Step')
             ax4.set_ylabel('loss_explore')
             ax4.plot(loss_list[3])
-
-
-            # for plotting while continue running program
+            # for plotting while continuing running program
             plt.draw()
             plt.pause(0.5)
 
