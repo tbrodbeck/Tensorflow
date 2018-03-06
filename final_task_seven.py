@@ -485,13 +485,16 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 # size of an action (the output for our policy has to be twice as big, as we
 # have to model a probability density function pdf over it)
 action_size = gym.make(env_name).action_space.shape[0]
+
 #how many environments should be used to generate train_data at once
 parallel_envs = 200
+
 #batch size for network in creating training data
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
 batch_size_parameter_optimization = 100
+
 # amount of epochs to train over one set of training_data
 optimization_epochs = 10
 
@@ -506,8 +509,10 @@ gae_lambda = 0.99
 
 # amount of training runs to assemble for one training-optimization iteration
 train_runs = 400
+
 # length of one training run, THIS IS NOT USED IN 'runs'
 train_run_length = 30
+
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
 assert training_sequence_length <= train_run_length 
@@ -517,17 +522,27 @@ train_mode = 'horizon'
 
 #truncation factor USE IN 'horizon' MODE ONLY!
 truncation_factor = 1000000
-#learn_rate
+
+# learn_rate
 learn_rate = 0.0005
-#epsilon
+
+# epsilon for l_clip loss function
 epsilon = 0.15
-#c1, hyperparameter factor for weighting l_value loss
+
+# c1, hyperparameter factor for weighting l_value loss
 c1 = 1
-#c2, hyperparameter factor for weighting l_exploration loss
-c2 = 1
+
+# c2, hyperparameter factor for weighting l_exploration loss
+c2 = 0.01
+
+
+''' Training '''
+
 ### This utility class saves weights and keeps track of the training_data
 utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
                         env_name, train_runs, train_mode, train_run_length)
+
+# for
 rewards_list = []
 print('Start training!')
 
@@ -617,13 +632,9 @@ for iteration in range(iteration_num):
 
                     alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
                     beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
-                    # print('shape_beta:' + str(beta.shape))
                     advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
-                    # print('shape advantages' + str(advantages.shape))
                     v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
-
                     action = np.stack([train_data[i]['action'] for i in index], axis=1)
-
                     observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
 
                 #can not preconstruct initializer, as new variables are added
