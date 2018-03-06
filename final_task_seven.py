@@ -475,7 +475,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 10
+iteration_num = 2
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -546,7 +546,6 @@ utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
 # keeping track of training success
 rewards_list = []
 plt.ion()
-plt.show()
 
 print('Start training!')
 
@@ -612,7 +611,7 @@ for iteration in range(iteration_num):
     ax.set_ylabel('Loss')
     ax.plot(rewards_list, label='Avarage Reward')
     ax.legend()
-    plt.pause(0.1)
+    plt.show()
 
     #Now we got the trian_data
     graph = tf.Graph()
@@ -676,5 +675,6 @@ for iteration in range(iteration_num):
                                     env_name, train_runs, train_mode,
                                     train_run_length)
 
+plt.ioff()
 plt.show()
                 
