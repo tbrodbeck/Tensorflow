@@ -654,8 +654,8 @@ for iteration in range(iteration_num):
                                  optimizing_network.optimization_observation:
                                  observation})
 
-                    for losses in loss_list:
-                        losses.append(loss)
+                    for list, losses in zip(loss_list, loss):
+                        list.append(losses)
 
         rewards_list.append(utility.get_average_reward())
         print(rewards_list)
