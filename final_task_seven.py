@@ -199,28 +199,41 @@ class Training_util:
         :return: list of dictionaries
         """
         dicts = []
-        assert length <= self.horizon
 
         for run_nr, run in enumerate(train_data):
 
             # chose on training occurance
             training = run['action']
+            print(len(training))
+            assert (len(training) > length)
+
 
             # amount of samples we have to skip
             cutout = len(training) % length
+            print(cutout)
+            print(len(training))
 
             # by chance choose the front-part of the trajectory
+            if cutout == 0:
+                for index in range(len(training)/length):
+                    beginn = index * length
+                    ending = index * length + length -1
             if bool(random.getrandbits(1)):
                 trajectory = training[:(len(training)) - cutout]
+                print(trajectory)
                 amount = len(trajectory)//length
+                print(91, amount)
+                assert amount > 0
                 for index in range(amount):
                     beginn = index * length
-                    ending = index * length + length
+                    ending = index * length + length2
 
             # or choose the back-part of the trajectory
             else:
                 trajectory = training[cutout - 1:]
+                print(trajectory)
                 amount = len(trajectory) // length
+                print(99, amount)
                 for index in range(amount):
                     beginn = index * length + cutout
                     ending = index * length + length + cutout
@@ -494,7 +507,7 @@ parallel_envs = 200
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 100
+batch_size_parameter_optimization = 5
 
 # amount of epochs to train over one set of training_data
 optimization_epochs = 10
@@ -559,6 +572,8 @@ for iteration in range(iteration_num):
     # The old network generates train_samples
     train_data_network = None
 
+    ''' Getting Training Samples'''
+
     with graph.as_default():
         step = 0
         done = False
@@ -600,51 +615,42 @@ for iteration in range(iteration_num):
                 utility = Training_util(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs, train_mode, train_run_length)
                 utility.train_data = train_data
 
-
-
-
-
-
-    #Now we got the trian_data
+    ''' Optimization step '''
+    # Now we got the trian_data
     graph = tf.Graph()
     with graph.as_default():
         optimizing_network = Network(lstm_unit_num,
-                                   observation_size,'iteration'+str(iteration)+'optimization',
-                                   action_size,
-                                   batch_size_parameter_optimization,
-                                   utility.weights, learn_rate = learn_rate)
+                                     observation_size, 'iteration' + str(iteration) + 'optimization',
+                                     action_size,
+                                     batch_size_parameter_optimization,
+                                     utility.weights, learn_rate=learn_rate)
         ### and now we have to implement the training procedure
         for epoch in range(optimization_epochs):
-            print(epoch)
-
-            #this is messy, might still work
-            used_samples = train_runs - (train_runs%batch_size_parameter_optimization)
+            # this is messy, might still work
+            used_samples = train_runs - (train_runs % batch_size_parameter_optimization)
             train_sample_plan = np.reshape(np.arange(used_samples),
-                                           (int(used_samples/batch_size_parameter_optimization),
-                                           batch_size_parameter_optimization))
+                                           (int(used_samples / batch_size_parameter_optimization),
+                                            batch_size_parameter_optimization))
             np.random.shuffle(train_sample_plan)
             train_sample_plan = train_sample_plan.tolist()
             train_data = utility.train_data
+
             # every index actually is a list of indices
-            
+            for enum, index in enumerate(train_sample_plan):
+                print('Optimization:Iteration:' + str(iteration) + 'Epoch' + str(epoch) + 'Run' + str(enum))
+                alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
+                beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
+                advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
+                v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
+                action = np.stack([train_data[i]['action'] for i in index], axis=1)
+                observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
+                train_step, loss = optimizing_network.optimize(
+                    'iteration' + str(iteration) + 'optimizationepoch' + str(epoch), training_sequence_length, epsilon,
+                    c1, c2)
 
-
-            train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
-                                            str(epoch),training_sequence_length, epsilon, c1, c2)
-            with tf.Session(graph = graph) as session:
-                for enum, index in enumerate(train_sample_plan):
-                    rand = np.random.randint(0, 20)
-
-                    alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
-                    beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
-                    advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
-                    v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
-                    action = np.stack([train_data[i]['action'] for i in index], axis=1)
-                    observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
-
+                with tf.Session(graph=graph) as session:
                     # can not preconstruct initializer, as new variables are added
                     session.run(tf.global_variables_initializer())
-
                     _, loss = session.run((train_step, loss), feed_dict =
                                 {optimizing_network.alpha: alpha,
                                  optimizing_network.beta: beta,
@@ -654,6 +660,8 @@ for iteration in range(iteration_num):
                                  optimizing_network.optimization_observation:
                                  observation})
 
+                    print("loss:")
+                    print(loss)
                     for list, losses in zip(loss_list, loss):
                         list.append(losses)
 
@@ -662,7 +670,8 @@ for iteration in range(iteration_num):
         print(loss_list)
 
         # plot
-        if (iteration % 2 == 0):
+        plot_step = 5
+        if ((iteration % 5)-1 == 0):
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111)
             ax.set_xlabel('Step')
@@ -692,7 +701,7 @@ for iteration in range(iteration_num):
 
             # for plotting while continue running program
             plt.draw()
-            plt.pause(0.1)
+            plt.pause(0.5)
 
         with tf.Session(graph = graph) as session:
             session.run(tf.global_variables_initializer())
