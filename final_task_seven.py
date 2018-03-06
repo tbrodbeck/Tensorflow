@@ -673,5 +673,5 @@ for iteration in range(iteration_num):
                                     env_name, train_runs, train_mode,
                                     train_run_length)
 
-
+plt.show()
                 
