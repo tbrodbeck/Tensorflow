@@ -512,7 +512,7 @@ gae_lambda = 0.95
 train_runs = 64
 
 # length of one training run (= horizon), THIS IS NOT USED IN 'runs'
-train_run_length = 100
+train_run_length = 10
 
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
@@ -528,7 +528,7 @@ truncation_factor = 1000000
 learn_rate = 0.0005
 
 # epsilon for l_clip loss function
-epsilon = 0.15
+epsilon = 0.3
 
 # c1, hyperparameter factor for weighting l_value loss
 c1 = 1
@@ -612,8 +612,7 @@ for iteration in range(iteration_num):
     ax.set_ylabel('Loss')
     ax.plot(rewards_list, label='Avarage Reward')
     ax.legend()
-    plt.draw()
-    plt.pause(0.001)
+    plt.pause(0.1)
 
     #Now we got the trian_data
     graph = tf.Graph()
