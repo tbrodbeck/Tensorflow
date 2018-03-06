@@ -559,7 +559,7 @@ for iteration in range(iteration_num):
 
                 if train_mode is 'horizon' and step % train_run_length == 0:
                     print('resetting')
-
+                    train_data_network.reset_states()
                 step+=1
                 done = is_done
 
