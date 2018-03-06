@@ -608,37 +608,37 @@ for iteration in range(iteration_num):
             train_data = utility.train_data
             # every index actually is a list of indices
             
-            for enum, index in enumerate(train_sample_plan):
 
 
-                train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
+            train_step, loss = optimizing_network.optimize('iteration'+str(iteration)+'optimizationepoch'+
                                             str(epoch),training_sequence_length, epsilon, c1, c2)
-                with tf.Session(graph = graph) as session:
+            with tf.Session(graph = graph) as session:
+                for enum, index in enumerate(train_sample_plan):
                     rand = np.random.randint(0, 20)
 
                     alpha = np.stack([train_data[i]['alpha'] for i in index], axis=1)
                     beta = np.stack([train_data[i]['beta'] for i in index], axis=1)
-
+                    # print('shape_beta:' + str(beta.shape))
                     advantages = np.stack([train_data[i]['advantage'] for i in index], axis=1)
-
+                    # print('shape advantages' + str(advantages.shape))
                     v_targ = np.stack([train_data[i]['v_targ'] for i in index], axis=1)
 
                     action = np.stack([train_data[i]['action'] for i in index], axis=1)
 
                     observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
 
-                    #can not preconstruct initializer, as new variables are added
-                    session.run(tf.global_variables_initializer())
-                    #print(tf.trainable_variables())
-                    #print('trainable variables:')
-                    _, loss = session.run((train_step, loss), feed_dict = 
-                                {optimizing_network.alpha: alpha, 
-                                 optimizing_network.beta: beta, 
-                                 optimizing_network.gae_advantage: advantages,
-                                 optimizing_network.target_value: v_targ, 
-                                 optimizing_network.action: action, 
-                                 optimizing_network.optimization_observation:
-                                 observation})
+                #can not preconstruct initializer, as new variables are added
+                session.run(tf.global_variables_initializer())
+                #print(tf.trainable_variables())
+                #print('trainable variables:')
+                _, loss = session.run((train_step, loss), feed_dict =
+                            {optimizing_network.alpha: alpha,
+                             optimizing_network.beta: beta,
+                             optimizing_network.gae_advantage: advantages,
+                             optimizing_network.target_value: v_targ,
+                             optimizing_network.action: action,
+                             optimizing_network.optimization_observation:
+                             observation})
 
         with tf.Session(graph = graph) as session:
             session.run(tf.global_variables_initializer())
