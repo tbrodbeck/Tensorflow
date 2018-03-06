@@ -6,7 +6,6 @@ import random
 import matplotlib.pyplot as plt
 
 class Training_util:
-    ### TODO: maybe add a is_multiplayer_env param
 
     def __init__(self, weights, parallel_train_units, gae_lambda, value_gamma,
                  env_name, train_runs, train_mode, horizon=None):
@@ -17,6 +16,7 @@ class Training_util:
         we need to save the weights, keep track of our gyms and the train_data
         stemming from the gyms
         Also a smart way to refine and provide the training samples is needed
+        TODO: maybe add a is_multiplayer_env param
 
         :param weights: weights of trainable policy
         :param parallel_train_units: number of parallel trained gym
@@ -28,7 +28,6 @@ class Training_util:
         :param train_mode: 'runs'- or 'horizon'-mode
         :param horizon: the amount of samples in case of 'horizon'
         """
-
         self.weights = weights
         self.train_data = []
         self.parallel_train_units = parallel_train_units
@@ -48,14 +47,15 @@ class Training_util:
 
         self.gae_lambda = gae_lambda
         self.value_gamma = value_gamma
-
-        ### trainmode switches between:
-        ### 'runs' : using @parallel_train_units environments, create
-        ### @train_runs runs, each with possibly different run length
-        ### in this mode, train_samples is not used
-        ### 'horizon': create train_runs runs of length
-        ### @train_samples. train_runs should be multiple of
-        ### parallel_train_units in this case
+        """
+        trainmode switches between:
+        'runs' : using @parallel_train_units environments, create
+        @train_runs runs, each with possibly different run length
+        in this mode, train_samples is not used
+        'horizon': create train_runs runs of length
+        @train_samples. train_runs should be multiple of
+        parallel_train_units in this case
+        """
         assert train_mode in ['runs', 'horizon']
         self.train_mode = train_mode
         self.train_runs = train_runs
@@ -68,22 +68,22 @@ class Training_util:
         return np.mean(np.stack(rewards_acc))
 
     def create_train_data_step(self, actions, value_estimate, alpha, beta):
-        ### actions is numpy array of parallel_train_units, action_size
-        ### this calls step(actions[respective_env_num]) on each env
-        ### returns (is_done, observations, resets):
-        ### is_done is true iff train_runs is reached
-        ### resets is list of size(parallel_train_units), detailing, which
-        ### train_units are reset (and should have their cellstate cleared
-        ### respectively), where 1: should be reset, 0: should not be reset
+        """
+        actions is numpy array of parallel_train_units, action_size
+        this calls step(actions[respective_env_num]) on each env
+        returns (is_done, observations, resets):
+        is_done is true iff train_runs is reached
+        resets is list of size(parallel_train_units), detailing, which
+        train_units are reset (and should have their cellstate cleared
+        respectively), where 1: should be reset, 0: should not be reset
+        """
         actions = np.split(actions, len(actions[:, 0]))
         value_estimate = np.split(value_estimate, len(value_estimate))
         if self.train_mode == 'runs':
             return self._create_train_data_step_runs(actions, value_estimate,
                                                      alpha, beta)
         elif self.train_mode == 'horizon':
-            return self._create_train_data_step_horizon(actions,
-                                                        value_estimate, alpha,
-                                                       beta)
+            return self._create_train_data_step_horizon(actions, value_estimate, alpha, beta)
 
     def _create_train_data_step_runs(self, actions, value_estimate, alpha, beta):
         assert len(actions) == len(self.envs)
@@ -91,9 +91,7 @@ class Training_util:
         self.observation = []
         resets = []
         for action, value, env, env_aggregator, alpha_val, beta_val in zip(actions, value_estimate, self.envs,
-                                                      self.envs_aggregator,
-                                                                           alpha,
-                                                                          beta):
+                                                      self.envs_aggregator, alpha, beta):
             
             env_action = action*2
             env_action = env_action-1
@@ -105,9 +103,11 @@ class Training_util:
             env_aggregator['value_list'].append(np.squeeze(value))
             env_aggregator['observation_list'].append(new_observation)
             env_aggregator['reward_list'].append(reward)
+
             if run_done:
                 self._add_run_to_train_data(env_aggregator)
             resets.append[run_done]
+
         is_done = self.train_runs <= len(self.train_data)
         self.observation = np.stack(self.observation)
         return (is_done, resets)
@@ -119,9 +119,7 @@ class Training_util:
         resets = []
         self.observation = []
         for action, value, env, env_aggregator, alpha_val, beta_val in zip(actions, value_estimate, self.envs,
-                                                      self.envs_aggregator,
-                                                                           alpha,
-                                                              beta):
+                                                      self.envs_aggregator, alpha, beta):
             env_action = action*2
             env_action = env_action-1
             new_observation, reward, run_done, _ = env.step(action)
@@ -133,7 +131,7 @@ class Training_util:
             env_aggregator['observation_list'].append(new_observation)
             env_aggregator['reward_list'].append(reward)
             run_done = run_done or len(env_aggregator['reward_list']) >= self.horizon
-            self.horizon
+
             if run_done:
                 self._add_run_to_train_data(env_aggregator)
             resets.append(run_done)
@@ -194,14 +192,12 @@ class Training_util:
         which is shuffled.
         Indexes the correspondung run, the beginnung and the end of a
         sequence.
-
         :param length: int
         :return: list of dictionaries
         """
         dicts = []
 
         for run_nr, run in enumerate(train_data):
-
             # chose on training occurance
             training = run['action']
             print(len(training))
@@ -226,8 +222,7 @@ class Training_util:
                 assert amount > 0
                 for index in range(amount):
                     beginn = index * length
-                    ending = index * length + length2
-
+                    ending = index * length + length
             # or choose the back-part of the trajectory
             else:
                 trajectory = training[cutout - 1:]
@@ -247,7 +242,6 @@ class Training_util:
 class Network:
     def __init__(self, num_units, observation_size, name, action_size,
                  batch_size, weights=None, learn_rate = None):
-
         """
         We define the network here.
 
@@ -310,7 +304,6 @@ class Network:
                                                   tf.squeeze(
                                                       self.embedding_bias))
                 self.lstm = CustomBasicLSTMCell(num_units)
-
                 # Define readout parameters
                 self.action_alpha_readout_weights = tf.Variable(initializer(
                     shape=(num_units, action_size)))
@@ -324,7 +317,6 @@ class Network:
                     shape=(num_units, 1)))
                 self.value_readout_bias = tf.Variable(initializer(shape=(1, 1)))
                 self.state = self.lstm.zero_state(batch_size, dtype=tf.float32)
-            
 
             if learn_rate is not None:
                 self.optimizer = tf.train.AdamOptimizer(learn_rate)
@@ -342,9 +334,6 @@ class Network:
         :return: value, action_alpha, action_beta, action
         """
         with tf.variable_scope(name):
-            #zero_one = tf.placeholder(tf.float32, shape=[self.batch_size, 1])
-            #self.newstate_c = tf.multiply(self.state.c, zero_one)
-            #self.newstate_h = tf.multiply(self.state.h, zero_one)
             #TODO maybe simply saving weights in a variable would be an option
             if step%truncation_factor == 0:
                 self.state = self.lstm.zero_state(self.batch_size, dtype =
@@ -366,9 +355,11 @@ class Network:
             action = tf.distributions.Beta(action_alpha, action_beta).sample()
             return value, action_alpha, action_beta, action
     def multiply_t(self, x,y, sequence_length): 
-        """This function computes the tf.matmul operation for some
+        """
+        This function computes the tf.matmul operation for some
         time-series input of size [t_steps, batch_size, vector_size] and a
-        weight matriy of size [vector_size, output_size]"""
+        weight matriy of size [vector_size, output_size]
+        """
         return tf.matmul(x,tf.stack([y for _ in range(sequence_length)],0))
 
     def optimize(self, name, sequence_length, epsilon, c1, c2):
@@ -420,34 +411,14 @@ class Network:
                                           self.action_beta_readout_weights,
                                                           sequence_length),
                                           tf.squeeze(self.action_beta_readout_bias))),tf.constant(1,dtype=tf.float32))
-            #print('alpha_pred shape')
-            #print(alpha_pred.get_shape())
-            #print('beta_pred_shape')
-            #print(beta_pred.get_shape())
-            #print('action is of size:')
-            #print(self.action[0,:,:].get_shape())
-            #print('squeezed action is of shape:')
-            #print(self.action[0,:,:].get_shape())
             policy_new = tf.distributions.Beta(alpha_pred, beta_pred)
             policy_old = tf.distributions.Beta(self.alpha, self.beta)
-            #print('squeezed action is of size')
-            #print(tf.squeeze(self.action[t_step,:,:]).get_shape())
             prob_new = policy_new.prob(tf.squeeze(self.action))
             prob_old = policy_old.prob(tf.squeeze(self.action))
             entropy = policy_new.entropy()
-            #print('shape of probabilities now: old:' + str(prob_new.get_shape())
-            #      + 'new: ' + str(prob_new.get_shape()))
-            #print('probs-new are of shape:')
-            #print(prob_new.get_shape())
-            #print('probs-old are of shape: ')
-            #print(prob_old.get_shape())
             entropy_product = tf.reduce_prod(entropy,axis=2)
             prob_product_old = tf.reduce_prod(prob_old, axis = 2)
             prob_product_new = tf.reduce_prod(prob_new, axis = 2)
-            #print('shape of entropy_loss' + str(l_explore.get_shape))
-            #print('shape of val_pred: ' + str(val_pred.get_shape()))
-            #print('shape of target_value' +
-            #      str(self.target_value[t_step,:].get_shape()))
             l_explore = entropy_product
             l_value = tf.square(tf.subtract(tf.squeeze(val_pred), self.target_value))
             prob_ratio = tf.divide(prob_product_new, prob_product_old)
@@ -456,7 +427,6 @@ class Network:
                                                tf.multiply(tf.constant(c1,dtype=tf.float32),
                                                            l_value)),
                                    tf.multiply(tf.constant(c2,dtype=tf.float32),l_explore))
-            #print('shape of loss' + str(loss_complete.get_shape()))
             inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32),
                                         loss_complete)
             learn_step = self.optimizer.minimize(tf.reduce_mean(inverted_loss))
@@ -501,7 +471,7 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 action_size = gym.make(env_name).action_space.shape[0]
 
 # how many environments should be used to generate train_data at once
-parallel_envs = 200
+parallel_envs = 100
 
 # batch size for network in creating training data
 batch_size_data_creation = parallel_envs
@@ -510,7 +480,7 @@ batch_size_data_creation = parallel_envs
 batch_size_parameter_optimization = 5
 
 # amount of epochs to train over one set of training_data
-optimization_epochs = 10
+optimization_epochs = 5
 
 # size of the lstm cell
 lstm_unit_num = 128
@@ -522,14 +492,14 @@ value_gamma = 0.99
 gae_lambda = 0.95
 
 # amount of training runs to assemble for one training-optimization iteration
-train_runs = 64
+train_runs = 200
 
 # length of one training run (= horizon), THIS IS NOT USED IN 'runs'
-train_run_length = 10
+train_run_length = 30
 
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
-assert training_sequence_length <= train_run_length 
+assert training_sequence_length <= train_run_length
 
 # train mode, either 'horizon' or 'runs'
 train_mode = 'horizon'
@@ -538,10 +508,10 @@ train_mode = 'horizon'
 truncation_factor = 1000000
 
 # learn_rate
-learn_rate = 0.0005
+learn_rate = 0.005
 
 # epsilon for l_clip loss function
-epsilon = 0.3
+epsilon = 0.2
 
 # c1, hyperparameter factor for weighting l_value loss
 c1 = 1
@@ -707,7 +677,6 @@ for iteration in range(iteration_num):
             session.run(tf.global_variables_initializer())
             parameters = session.run(optimizing_network.network_parameters())
             weights = {}
-
             #keys are defined in the hyperparameter list
             for parameter, key in zip(parameters, keys):
                 weights[key] = parameter 
