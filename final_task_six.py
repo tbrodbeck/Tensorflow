@@ -428,9 +428,9 @@ class Network:
 
             # for plotting
             tf.summary.scalar("loss_clip", tf.reduce_mean(loss_clip))
-            tf.summary.scalar("loss_value", loss_value)
-            tf.summary.scalar("loss_explore", loss_explore)
-            tf.summary.scalar("loss_complete", loss_complete)
+            tf.summary.scalar("loss_value", tf.reduce_mean(loss_value))
+            tf.summary.scalar("loss_explore", tf.reduce_mean(loss_explore))
+            tf.summary.scalar("loss_complete", tf.reduce_mean(loss_complete))
             summaries = tf.summary.merge_all()
 
             inverted_loss = tf.multiply(tf.constant(-1, dtype = tf.float32),
