@@ -477,7 +477,7 @@ parallel_envs = 100
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 5
+batch_size_parameter_optimization = 50
 
 # amount of epochs to train over one set of training_data
 optimization_epochs = 5
