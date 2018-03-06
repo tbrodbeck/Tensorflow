@@ -45,9 +45,9 @@ learn_rate = 0.005
 # epsilon for l_clip loss function
 epsilon = 0.2
 # c1, hyperparameter factor for weighting l_value loss
-c1 = 0.05
+c1 = 2
 # c2, hyperparameter factor for weighting l_exploration loss
-c2 = 0.01
+c2 = 1
 
 
 ''' Training '''
