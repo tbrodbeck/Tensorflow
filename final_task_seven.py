@@ -475,7 +475,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 1000
+iteration_num = 3
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -494,7 +494,7 @@ parallel_envs = 200
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 64
+batch_size_parameter_optimization = 100
 
 # amount of epochs to train over one set of training_data
 optimization_epochs = 10
@@ -545,6 +545,7 @@ utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
 
 # keeping track of training success
 rewards_list = []
+loss_list = [[],[],[],[]]
 plt.ion()
 
 print('Start training!')
@@ -587,7 +588,6 @@ for iteration in range(iteration_num):
                 step+=1
                 done = is_done
 
-        print('next iteration')
         if iteration == 0: 
             with tf.Session(graph = graph) as session:
                 session.run(tf.global_variables_initializer())
@@ -600,19 +600,10 @@ for iteration in range(iteration_num):
                 utility = Training_util(weights, parallel_envs, gae_lambda, value_gamma, env_name, train_runs, train_mode, train_run_length)
                 utility.train_data = train_data
 
-    rewards_list.append(utility.get_average_reward())
-    print(rewards_list)
 
-    # plot
-    if (iteration % 50 == 0):
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111)
-        ax.set_xlabel('Step')
-        ax.set_ylabel('Reward')
-        ax.plot(rewards_list, label='Avarage Reward')
-        ax.legend()
-        plt.draw()
-        plt.pause(0.1)
+
+
+
 
     #Now we got the trian_data
     graph = tf.Graph()
@@ -651,18 +642,57 @@ for iteration in range(iteration_num):
                     action = np.stack([train_data[i]['action'] for i in index], axis=1)
                     observation = np.stack([train_data[i]['observation'] for i in index], axis=1)
 
-                #can not preconstruct initializer, as new variables are added
-                session.run(tf.global_variables_initializer())
-                #print(tf.trainable_variables())
-                #print('trainable variables:')
-                _, loss = session.run((train_step, loss), feed_dict =
-                            {optimizing_network.alpha: alpha,
-                             optimizing_network.beta: beta,
-                             optimizing_network.gae_advantage: advantages,
-                             optimizing_network.target_value: v_targ,
-                             optimizing_network.action: action,
-                             optimizing_network.optimization_observation:
-                             observation})
+                    # can not preconstruct initializer, as new variables are added
+                    session.run(tf.global_variables_initializer())
+
+                    _, loss = session.run((train_step, loss), feed_dict =
+                                {optimizing_network.alpha: alpha,
+                                 optimizing_network.beta: beta,
+                                 optimizing_network.gae_advantage: advantages,
+                                 optimizing_network.target_value: v_targ,
+                                 optimizing_network.action: action,
+                                 optimizing_network.optimization_observation:
+                                 observation})
+
+                    for losses in loss_list:
+                        losses.append(loss)
+
+        rewards_list.append(utility.get_average_reward())
+        print(rewards_list)
+        print(loss_list)
+
+        # plot
+        if (iteration % 25 == 0):
+            fig = plt.figure(figsize=(10, 10))
+            ax = fig.add_subplot(111)
+            ax.set_xlabel('Step')
+            ax.set_ylabel('Reward')
+            ax.plot(rewards_list, label='Avarage Reward')
+            ax.legend()
+
+
+            fig2 = plt.figure(figsize=(10, 10))
+            ax1 = fig2.add_subplot(221)
+            ax1.set_xlabel('Step')
+            ax1.set_ylabel('loss_complete')
+            ax1.plot(loss_list[0])
+            ax2 = fig2.add_subplot(222)
+            ax2.set_xlabel('Step')
+            ax2.set_ylabel('loss_clip')
+            ax2.plot(loss_list[1])
+            ax3 = fig2.add_subplot(223)
+            ax3.set_xlabel('Step')
+            ax3.set_ylabel('loss_value')
+            ax3.plot(loss_list[2])
+            ax4 = fig2.add_subplot(224)
+            ax4.set_xlabel('Step')
+            ax4.set_ylabel('loss_explore')
+            ax4.plot(loss_list[3])
+
+
+            # for plotting while continue running program
+            plt.draw()
+            plt.pause(0.1)
 
         with tf.Session(graph = graph) as session:
             session.run(tf.global_variables_initializer())
