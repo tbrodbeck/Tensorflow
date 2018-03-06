@@ -202,7 +202,7 @@ for iteration in range(iteration_num):
         print(loss_list)
 
         # ploting
-        plot_step = 2
+        plot_step = 20
         if ((iteration % plot_step) - 1 == 0):
             # plot of reward
             fig = plt.figure(figsize=(10, 10))
