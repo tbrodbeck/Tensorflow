@@ -45,7 +45,7 @@ learn_rate = 0.005
 # epsilon for l_clip loss function
 epsilon = 0.2
 # c1, hyperparameter factor for weighting l_value loss
-c1 = 1
+c1 = 0.05
 # c2, hyperparameter factor for weighting l_exploration loss
 c2 = 0.01
 
@@ -222,6 +222,9 @@ for iteration in range(iteration_num):
             plt.draw()
             plt.pause(0.5)
 
+        test = gym.make(env_name)
+        test.step()
+        test.render()
 
         ''' Save the trained parameters '''
 
