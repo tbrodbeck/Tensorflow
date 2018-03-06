@@ -608,10 +608,10 @@ for iteration in range(iteration_num):
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111)
     ax.set_xlabel('Step')
-    ax.set_ylabel('Loss')
+    ax.set_ylabel('Reward')
     ax.plot(rewards_list, label='Avarage Reward')
     ax.legend()
-    plt.pause(0.05)
+    plt.pause(0.1)
 
     #Now we got the trian_data
     graph = tf.Graph()
