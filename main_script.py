@@ -222,9 +222,6 @@ for iteration in range(iteration_num):
             plt.draw()
             plt.pause(0.5)
 
-        test = gym.make(env_name)
-        test.step()
-        test.render()
 
         ''' Save the trained parameters '''
 
