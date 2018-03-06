@@ -3,6 +3,7 @@ import numpy as np
 import gym
 from CustomCell import CustomBasicLSTMCell
 import random
+import matplotlib.pyplot as plt
 
 class Training_util:
     ### TODO: maybe add a is_multiplayer_env param
@@ -474,7 +475,7 @@ keys = ['lstm_weights', 'lstm_bias', 'embedding_weights',
 ''' Hyperparameters '''
 
 # number of iterations for the whole algorithm
-iteration_num = 100
+iteration_num = 10
 
 # name of the openaigym used
 env_name = 'Ant-v1'
@@ -487,13 +488,13 @@ observation_size = gym.make(env_name).observation_space.shape[0]
 action_size = gym.make(env_name).action_space.shape[0]
 
 # how many environments should be used to generate train_data at once
-parallel_envs = 32
+parallel_envs = 64
 
 # batch size for network in creating training data
 batch_size_data_creation = parallel_envs
 
 # size of a minibatch in in optimization
-batch_size_parameter_optimization = 100
+batch_size_parameter_optimization = 64
 
 # amount of epochs to train over one set of training_data
 optimization_epochs = 10
@@ -505,13 +506,13 @@ lstm_unit_num = 128
 value_gamma = 0.99
 
 # lambda value for generalized advantage estimator gae values
-gae_lambda = 0.99
+gae_lambda = 0.95
 
 # amount of training runs to assemble for one training-optimization iteration
-train_runs = 400
+train_runs = 64
 
-# length of one training run, THIS IS NOT USED IN 'runs'
-train_run_length = 200
+# length of one training run (= horizon), THIS IS NOT USED IN 'runs'
+train_run_length = 100
 
 # length of the subsequences we will train on
 training_sequence_length = train_run_length 
@@ -542,8 +543,9 @@ c2 = 0.01
 utility = Training_util(None, parallel_envs, gae_lambda, value_gamma,
                         env_name, train_runs, train_mode, train_run_length)
 
-# for
+# keeping track of training success
 rewards_list = []
+
 print('Start training!')
 
 for iteration in range(iteration_num):
@@ -662,5 +664,11 @@ for iteration in range(iteration_num):
                                     env_name, train_runs, train_mode,
                                     train_run_length)
 
-            
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('Step')
+        ax.set_ylabel('Loss')
+        ax.plot(rewards_list, label='Avarage Reward')
+        ax.legend()
+        plt.show()
                 
