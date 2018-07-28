@@ -172,7 +172,7 @@ for iteration in range(iteration_num):
                      optimizing_network.target_value: v_targ,
                      optimizing_network.action: action,
                      optimizing_network.optimization_observation:
-                         observation})
+                         observation})y
 
                     # retrieval for plotting
                     for list, losses in zip(loss_iteration_list, loss):
